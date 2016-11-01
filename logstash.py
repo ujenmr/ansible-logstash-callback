@@ -9,7 +9,12 @@ import socket
 import uuid
 
 import logging
-import logstash
+
+try:
+    import logstash
+    HAS_LOGSTASH = True
+except ImportError:
+    HAS_LOGSTASH = False
 
 from ansible.plugins.callback import CallbackBase
 
@@ -22,12 +27,15 @@ class CallbackModule(CallbackBase):
     and put the plugin in <path_to_callback_plugins_folder>
 
     logstash config:
-    input {
-        tcp {
-            port => 5000
-            codec => json
+        input {
+            tcp {
+                port => 5000
+                codec => json
+            }
         }
-    }
+
+    Requires:
+        python-logstash
 
     This plugin makes use of the following environment variables:
         LOGSTASH_SERVER   (optional): defaults to localhost
@@ -42,20 +50,25 @@ class CallbackModule(CallbackBase):
     def __init__(self):
         super(CallbackModule, self).__init__()
 
-        self.logger =  logging.getLogger('python-logstash-logger')
-        self.logger.setLevel(logging.DEBUG)
+        if not HAS_LOGSTASH:
+            self.disabled = True
+            self._display.warning("The required python-logstash is not installed. "
+                "pip install python-logstash")
+        else:
+            self.logger =  logging.getLogger('python-logstash-logger')
+            self.logger.setLevel(logging.DEBUG)
 
-        self.handler = logstash.TCPLogstashHandler(
-            os.getenv('LOGSTASH_SERVER', 'localhost'),
-            int(os.getenv('LOGSTASH_PORT', 5000)),
-            version=1,
-            message_type=os.getenv('LOGSTASH_TYPE', 'ansible')
-        )
+            self.handler = logstash.TCPLogstashHandler(
+                os.getenv('LOGSTASH_SERVER', 'localhost'),
+                int(os.getenv('LOGSTASH_PORT', 5000)),
+                version=1,
+                message_type=os.getenv('LOGSTASH_TYPE', 'ansible')
+            )
 
-        self.logger.addHandler(self.handler)
-        self.hostname = socket.gethostname()
-        self.session = str(uuid.uuid1())
-        self.errors = 0
+            self.logger.addHandler(self.handler)
+            self.hostname = socket.gethostname()
+            self.session = str(uuid.uuid1())
+            self.errors = 0
 
     def v2_playbook_on_start(self, playbook):
         self.playbook = playbook._file_name
