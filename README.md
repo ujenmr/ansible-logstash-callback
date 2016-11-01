@@ -1,5 +1,10 @@
 # Ansible Logstash Callback Plugin
 
+install python-logstash:
+```
+pip install python-logstash
+```
+
 ansible.cfg:
 ```
     callback_plugins   = <path_to_callback_plugins_folder>
