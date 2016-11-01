@@ -6,7 +6,7 @@ ansible.cfg:
     callback_whitelist = logstash
 ```
 
-Put the plugin in <path_to_callback_plugins_folder>
+Put the plugin in path_to_callback_plugins_folder
 
 logstash config:
 ```
