@@ -18,7 +18,9 @@ input {
 }
 ```
 
+
+
 This plugin makes use of the following environment variables:
-    LOGSTASH_SERVER   (optional): defaults to localhost
-    LOGSTASH_PORT     (optional): defaults to 5000
-    LOGSTASH_TYPE     (optional): defaults to ansible
+* `LOGSTASH_SERVER`   (optional): defaults to localhost
+* `LOGSTASH_PORT`     (optional): defaults to 5000
+* `LOGSTASH_TYPE`     (optional): defaults to ansible
