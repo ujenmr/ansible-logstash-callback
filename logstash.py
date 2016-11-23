@@ -117,26 +117,40 @@ class CallbackModule(CallbackBase):
         self.logger.info("ansible stats", extra = data)
 
     def v2_runner_on_ok(self, result, **kwargs):
-        data = {
-            'status': "OK",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_type': "task",
-            'ansible_playbook': self.playbook,
-            'ansible_host': result._host.name,
-            'ansible_task': result._task,
-            'ansible_result': self._dump_results(result._result)
-        }
+        task_name = str(result._task).replace('TASK: ','')
+        if task_name == 'setup':
+            data = {
+                'status': "OK",
+                'host': self.hostname,
+                'session': self.session,
+                'ansible_type': "task",
+                'ansible_playbook': self.playbook,
+                'ansible_host': result._host.name,
+                'ansible_task': task_name,
+                'ansible_facts': self._dump_results(result._result)
+            }
+        else:
+            data = {
+                'status': "OK",
+                'host': self.hostname,
+                'session': self.session,
+                'ansible_type': "task",
+                'ansible_playbook': self.playbook,
+                'ansible_host': result._host.name,
+                'ansible_task': task_name,
+                'ansible_result': self._dump_results(result._result)
+            }
         self.logger.info("ansible ok", extra = data)
 
     def v2_runner_on_skipped(self, result, **kwargs):
+        task_name = str(result._task).replace('TASK: ','')
         data = {
             'status': "SKIPPED",
             'host': self.hostname,
             'session': self.session,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
-            'ansible_task': result._task,
+            'ansible_task': task_name,
             'ansible_host': result._host.name
         }
         self.logger.info("ansible skipped", extra = data)
@@ -166,6 +180,7 @@ class CallbackModule(CallbackBase):
         self.logger.info("ansible import", extra = data)
 
     def v2_runner_on_failed(self, result, **kwargs):
+        task_name = str(result._task).replace('TASK: ','')
         data = {
             'status': "FAILED",
             'host': self.hostname,
@@ -173,13 +188,14 @@ class CallbackModule(CallbackBase):
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
-            'ansible_task': result._task,
+            'ansible_task': task_name,
             'ansible_result': self._dump_results(result._result)
         }
         self.errors += 1
         self.logger.error("ansible failed", extra = data)
 
     def v2_runner_on_unreachable(self, result, **kwargs):
+        task_name = str(result._task).replace('TASK: ','')
         data = {
             'status': "UNREACHABLE",
             'host': self.hostname,
@@ -187,12 +203,13 @@ class CallbackModule(CallbackBase):
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
-            'ansible_task': result._task,
+            'ansible_task': task_name,
             'ansible_result': self._dump_results(result._result)
         }
         self.logger.error("ansbile unreachable", extra = data)
 
     def v2_runner_on_async_failed(self, result, **kwargs):
+        task_name = str(result._task).replace('TASK: ','')
         data = {
             'status': "FAILED",
             'host': self.hostname,
@@ -200,7 +217,7 @@ class CallbackModule(CallbackBase):
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
-            'ansible_task': result._task,
+            'ansible_task': task_name,
             'ansible_result': self._dump_results(result._result)
         }
         self.errors += 1
