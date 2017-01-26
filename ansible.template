@@ -1,0 +1,51 @@
+{
+  "mappings": {
+    "_default_": {
+      "_all": {
+        "norms": false
+      },
+      "dynamic_templates": [
+        {
+          "strings_as_keyword": {
+            "mapping": {
+              "ignore_above": 1024,
+              "type": "keyword"
+            },
+            "match_mapping_type": "string"
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "input_type": {
+          "ignore_above": 1024,
+          "type": "keyword"
+        },
+        "message": {
+          "norms": false,
+          "type": "text"
+        },
+        "ansible_result": {
+          "norms": false,
+          "type": "text"
+        },
+        "ansible_facts": {
+          "norms": false,
+          "type": "text"
+        },
+        "tags": {
+          "ignore_above": 1024,
+          "type": "keyword"
+        },
+        "type": {
+          "ignore_above": 1024,
+          "type": "keyword"
+        },
+      }
+    }
+  },
+  "order": 0,
+  "template": "ansible-*"
+}
