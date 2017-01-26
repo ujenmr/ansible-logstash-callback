@@ -94,7 +94,7 @@ class CallbackModule(CallbackBase):
             'ansible_type': "start",
             'ansible_playbook': self.playbook,
         }
-        self.logger.info("ansible start", extra = data)
+        self.logger.info("START " + self.playbook, extra = data)
 
     def v2_playbook_on_stats(self, stats):
         summarize_stat = {}
@@ -112,9 +112,9 @@ class CallbackModule(CallbackBase):
             'session': self.session,
             'ansible_type': "finish",
             'ansible_playbook': self.playbook,
-            'ansible_result': json.dumps(summarize_stat),
+            'ansible_result': json.dumps(summarize_stat), # deprecated field
         }
-        self.logger.info("ansible stats", extra = data)
+        self.logger.info(json.dumps(summarize_stat), extra = data)
 
     def v2_runner_on_ok(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ','')
@@ -123,24 +123,26 @@ class CallbackModule(CallbackBase):
                 'status': "OK",
                 'host': self.hostname,
                 'session': self.session,
-                'ansible_type': "task",
+                'ansible_type': "setup",
                 'ansible_playbook': self.playbook,
                 'ansible_host': result._host.name,
                 'ansible_task': task_name,
-                'ansible_facts': self._dump_results(result._result)
+                'ansible_facts': self._dump_results(result._result) # deprecated field
             }
         else:
+            changed = result._result['changed']
             data = {
                 'status': "OK",
                 'host': self.hostname,
                 'session': self.session,
+                'ansible_changed': changed,
                 'ansible_type': "task",
                 'ansible_playbook': self.playbook,
                 'ansible_host': result._host.name,
                 'ansible_task': task_name,
-                'ansible_result': self._dump_results(result._result)
+                'ansible_result': self._dump_results(result._result) # deprecated field
             }
-        self.logger.info("ansible ok", extra = data)
+        self.logger.info(self._dump_results(result._result), extra = data)
 
     def v2_runner_on_skipped(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ','')
@@ -153,7 +155,7 @@ class CallbackModule(CallbackBase):
             'ansible_task': task_name,
             'ansible_host': result._host.name
         }
-        self.logger.info("ansible skipped", extra = data)
+        self.logger.info("SKIPPED " + task_name, extra = data)
 
     def v2_playbook_on_import_for_host(self, result, imported_file):
         data = {
@@ -165,7 +167,7 @@ class CallbackModule(CallbackBase):
             'ansible_host': result._host.name,
             'imported_file': imported_file
         }
-        self.logger.info("ansible import", extra = data)
+        self.logger.info("IMPORT " + imported_file, extra = data)
 
     def v2_playbook_on_not_import_for_host(self, result, missing_file):
         data = {
@@ -177,22 +179,24 @@ class CallbackModule(CallbackBase):
             'ansible_host': result._host.name,
             'missing_file': missing_file
         }
-        self.logger.info("ansible import", extra = data)
+        self.logger.info("NOT IMPORTED " + missing_file, extra = data)
 
     def v2_runner_on_failed(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ','')
+        changed = result._result['changed']
         data = {
             'status': "FAILED",
             'host': self.hostname,
             'session': self.session,
+            'ansible_changed': changed,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
-            'ansible_result': self._dump_results(result._result)
+            'ansible_result': self._dump_results(result._result) # deprecated field
         }
         self.errors += 1
-        self.logger.error("ansible failed", extra = data)
+        self.logger.error(self._dump_results(result._result), extra = data)
 
     def v2_runner_on_unreachable(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ','')
@@ -204,9 +208,9 @@ class CallbackModule(CallbackBase):
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
-            'ansible_result': self._dump_results(result._result)
+            'ansible_result': self._dump_results(result._result) # deprecated field
         }
-        self.logger.error("ansible unreachable", extra = data)
+        self.logger.error(self._dump_results(result._result), extra = data)
 
     def v2_runner_on_async_failed(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ','')
@@ -218,7 +222,7 @@ class CallbackModule(CallbackBase):
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
-            'ansible_result': self._dump_results(result._result)
+            'ansible_result': self._dump_results(result._result) # deprecated field
         }
         self.errors += 1
-        self.logger.error("ansible async", extra = data)
+        self.logger.error(self._dump_results(result._result), extra = data)
