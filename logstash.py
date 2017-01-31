@@ -130,7 +130,11 @@ class CallbackModule(CallbackBase):
                 'ansible_facts': self._dump_results(result._result) # deprecated field
             }
         else:
-            changed = result._result['changed']
+            if 'changed' in result._result.keys():
+                changed = result._result['changed']
+            else:
+                changed = False
+
             data = {
                 'status': "OK",
                 'host': self.hostname,
@@ -183,7 +187,10 @@ class CallbackModule(CallbackBase):
 
     def v2_runner_on_failed(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ','')
-        changed = result._result['changed']
+        if 'changed' in result._result.keys():
+            changed = result._result['changed']
+        else:
+            changed = False
         data = {
             'status': "FAILED",
             'host': self.hostname,
