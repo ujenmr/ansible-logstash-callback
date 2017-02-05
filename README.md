@@ -49,6 +49,20 @@ output {
     }
 }
 ```
+
+### Elasticsearch
+This repository contains a file titled `ansible.template`. This template can be loaded into your elasticsearch cluster to provide a nice mapping for the ansible data.
+
+List available templates
+```
+curl -s -XGET localhost:9200/_template
+```
+
+Load the template
+```
+curl -s -XPUT 'http://localhost:9200/_template/ansible' -d@ansible.template
+```
+
 - - - -
 
 # Example Usage and Output
