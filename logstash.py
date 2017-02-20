@@ -119,8 +119,12 @@ class CallbackModule(CallbackBase):
         }
         self.logger.info(json.dumps(summarize_stat), extra = data)
 
+    '''
+    Tasks and handler tasks are dealt with here
+    '''
     def v2_runner_on_ok(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('HANDLER: ','')
         if task_name == 'setup':
             data = {
                 'status': "OK",
@@ -138,7 +142,6 @@ class CallbackModule(CallbackBase):
                 changed = result._result['changed']
             else:
                 changed = False
-
             data = {
                 'status': "OK",
                 'host': self.hostname,
