@@ -53,10 +53,10 @@ class CallbackModule(CallbackBase):
         python-logstash
 
     This plugin makes use of the following environment variables:
-        LOGSTASH_SERVER                (optional): defaults is "localhost"
-        LOGSTASH_PORT                  (optional): defaults is "5000"
-        LOGSTASH_TYPE                  (optional): defaults is "ansible"
-        LOGSTASH_PRE_COMMAND           (optional): defaults is "ansible --version | head -1" execute command before run and result put ansible_pre_command_output field
+        LOGSTASH_SERVER      (optional): defaults is "localhost"
+        LOGSTASH_PORT        (optional): defaults is "5000"
+        LOGSTASH_TYPE        (optional): defaults is "ansible"
+        LOGSTASH_PRE_COMMAND (optional): defaults is "ansible --version | head -1" execute command before run and result put ansible_pre_command_output field
     """
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE = 'aggregate'
