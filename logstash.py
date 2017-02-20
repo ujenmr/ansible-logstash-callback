@@ -120,10 +120,10 @@ class CallbackModule(CallbackBase):
         self.logger.info(json.dumps(summarize_stat), extra = data)
 
     def v2_playbook_on_play_start(self, play):
-        self.play_id = play._uuid
+        self.play_id = str(play._uuid)
 
     def v2_playbook_on_task_start(self, task, is_conditional):
-        self.task_id = task._uuid
+        self.task_id = str(task._uuid)
 
     '''
     Tasks and handler tasks are dealt with here
