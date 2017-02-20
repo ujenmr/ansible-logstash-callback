@@ -119,13 +119,24 @@ class CallbackModule(CallbackBase):
         }
         self.logger.info(json.dumps(summarize_stat), extra = data)
 
+    def v2_playbook_on_play_start(self, play):
+        self.play_id = play._uuid
+
+    def v2_playbook_on_task_start(self, task, is_conditional):
+        self.task_id = task._uuid
+
+    '''
+    Tasks and handler tasks are dealt with here
+    '''
     def v2_runner_on_ok(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('HANDLER: ','')
         if task_name == 'setup':
             data = {
                 'status': "OK",
                 'host': self.hostname,
                 'session': self.session,
+                'ansible_play_id': self.play_id,
                 'ansible_type': "setup",
                 'ansible_playbook': self.playbook,
                 'ansible_host': result._host.name,
@@ -138,16 +149,17 @@ class CallbackModule(CallbackBase):
                 changed = result._result['changed']
             else:
                 changed = False
-
             data = {
                 'status': "OK",
                 'host': self.hostname,
                 'session': self.session,
+                'ansible_play_id': self.play_id,
                 'ansible_changed': changed,
                 'ansible_type': "task",
                 'ansible_playbook': self.playbook,
                 'ansible_host': result._host.name,
                 'ansible_task': task_name,
+                'ansible_task_id': self.task_id,
                 'ansible_pre_command_output': self.pre_command_output,
                 'ansible_result': self._dump_results(result._result) # deprecated field
             }
@@ -159,9 +171,11 @@ class CallbackModule(CallbackBase):
             'status': "SKIPPED",
             'host': self.hostname,
             'session': self.session,
+            'ansible_play_id': self.play_id,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_task': task_name,
+            'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
             'ansible_host': result._host.name
         }
@@ -172,6 +186,7 @@ class CallbackModule(CallbackBase):
             'status': "IMPORTED",
             'host': self.hostname,
             'session': self.session,
+            'ansible_play_id': self.play_id,
             'ansible_type': "import",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
@@ -185,6 +200,7 @@ class CallbackModule(CallbackBase):
             'status': "NOT IMPORTED",
             'host': self.hostname,
             'session': self.session,
+            'ansible_play_id': self.play_id,
             'ansible_type': "import",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
@@ -203,11 +219,13 @@ class CallbackModule(CallbackBase):
             'status': "FAILED",
             'host': self.hostname,
             'session': self.session,
+            'ansible_play_id': self.play_id,
             'ansible_changed': changed,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
+            'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
             'ansible_result': self._dump_results(result._result) # deprecated field
         }
@@ -220,10 +238,12 @@ class CallbackModule(CallbackBase):
             'status': "UNREACHABLE",
             'host': self.hostname,
             'session': self.session,
+            'ansible_play_id': self.play_id,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
+            'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
             'ansible_result': self._dump_results(result._result) # deprecated field
         }
@@ -235,10 +255,12 @@ class CallbackModule(CallbackBase):
             'status': "FAILED",
             'host': self.hostname,
             'session': self.session,
+            'ansible_play_id': self.play_id,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
+            'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
             'ansible_result': self._dump_results(result._result) # deprecated field
         }
