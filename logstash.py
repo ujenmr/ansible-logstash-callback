@@ -53,9 +53,10 @@ class CallbackModule(CallbackBase):
         python-logstash
 
     This plugin makes use of the following environment variables:
-        LOGSTASH_SERVER   (optional): defaults to localhost
-        LOGSTASH_PORT     (optional): defaults to 5000
-        LOGSTASH_TYPE     (optional): defaults to ansible
+        LOGSTASH_SERVER                (optional): defaults is "localhost"
+        LOGSTASH_PORT                  (optional): defaults is "5000"
+        LOGSTASH_TYPE                  (optional): defaults is "ansible"
+        LOGSTASH_PRE_COMMAND           (optional): defaults is "ansible --version | head -1" execute command before run and result put ansible_pre_command_output field
     """
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE = 'aggregate'
@@ -83,6 +84,7 @@ class CallbackModule(CallbackBase):
             self.logger.addHandler(self.handler)
             self.hostname = socket.gethostname()
             self.session = str(uuid.uuid1())
+            self.pre_command_output = os.popen(os.getenv("LOGSTASH_PRE_COMMAND", "ansible --version | head -1")).read()
             self.errors = 0
 
     def v2_playbook_on_start(self, playbook):
@@ -112,6 +114,7 @@ class CallbackModule(CallbackBase):
             'session': self.session,
             'ansible_type': "finish",
             'ansible_playbook': self.playbook,
+            'ansible_pre_command_output': self.pre_command_output,
             'ansible_result': json.dumps(summarize_stat), # deprecated field
         }
         self.logger.info(json.dumps(summarize_stat), extra = data)
@@ -127,6 +130,7 @@ class CallbackModule(CallbackBase):
                 'ansible_playbook': self.playbook,
                 'ansible_host': result._host.name,
                 'ansible_task': task_name,
+                'ansible_pre_command_output': self.pre_command_output,
                 'ansible_facts': self._dump_results(result._result) # deprecated field
             }
         else:
@@ -144,6 +148,7 @@ class CallbackModule(CallbackBase):
                 'ansible_playbook': self.playbook,
                 'ansible_host': result._host.name,
                 'ansible_task': task_name,
+                'ansible_pre_command_output': self.pre_command_output,
                 'ansible_result': self._dump_results(result._result) # deprecated field
             }
         self.logger.info(self._dump_results(result._result), extra = data)
@@ -157,6 +162,7 @@ class CallbackModule(CallbackBase):
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_task': task_name,
+            'ansible_pre_command_output': self.pre_command_output,
             'ansible_host': result._host.name
         }
         self.logger.info("SKIPPED " + task_name, extra = data)
@@ -169,6 +175,7 @@ class CallbackModule(CallbackBase):
             'ansible_type': "import",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
+            'ansible_pre_command_output': self.pre_command_output,
             'imported_file': imported_file
         }
         self.logger.info("IMPORT " + imported_file, extra = data)
@@ -181,6 +188,7 @@ class CallbackModule(CallbackBase):
             'ansible_type': "import",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
+            'ansible_pre_command_output': self.pre_command_output,
             'missing_file': missing_file
         }
         self.logger.info("NOT IMPORTED " + missing_file, extra = data)
@@ -200,6 +208,7 @@ class CallbackModule(CallbackBase):
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
+            'ansible_pre_command_output': self.pre_command_output,
             'ansible_result': self._dump_results(result._result) # deprecated field
         }
         self.errors += 1
@@ -215,6 +224,7 @@ class CallbackModule(CallbackBase):
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
+            'ansible_pre_command_output': self.pre_command_output,
             'ansible_result': self._dump_results(result._result) # deprecated field
         }
         self.logger.error(self._dump_results(result._result), extra = data)
@@ -229,6 +239,7 @@ class CallbackModule(CallbackBase):
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
+            'ansible_pre_command_output': self.pre_command_output,
             'ansible_result': self._dump_results(result._result) # deprecated field
         }
         self.errors += 1
