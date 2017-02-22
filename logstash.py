@@ -29,6 +29,12 @@ try:
 except ImportError:
     HAS_LOGSTASH = False
 
+try:
+    from __main__ import cli
+except ImportError:
+    # using API w/o cli
+    cli = False
+
 from ansible.plugins.callback import CallbackBase
 
 class CallbackModule(CallbackBase):
@@ -86,16 +92,26 @@ class CallbackModule(CallbackBase):
                 "LOGSTASH_PRE_COMMAND", "ansible --version | head -1")).read()
             self.errors = 0
 
+            self.base_data = {
+                'session': self.session,
+                'ansible_pre_command_output': self.pre_command_output,
+                'host': self.hostname
+            }
+
+            self.options = {}
+            if cli:
+                self._options = cli.options
+                self.base_data['ansible_checkmode'] = self._options.check
+                self.base_data['ansible_tags'] = self._options.tags
+                self.base_data['ansible_skip_tags'] = self._options.skip_tags
+                self.base_data['inventory'] = self._options.inventory
+
     def v2_playbook_on_start(self, playbook):
-        self.playbook = playbook._file_name
-        data = {
-            'status': "OK",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_type': "start",
-            'ansible_playbook': self.playbook,
-        }
-        self.logger.info("START PLAYBOOK | " + self.playbook, extra=data)
+        data = self.base_data.copy()
+        data['ansible_type'] = "start"
+        data['status'] = "OK"
+        data['ansible_playbook'] = playbook._file_name
+        self.logger.info("START PLAYBOOK | " + data['ansible_playbook'], extra=data)
 
     def v2_playbook_on_stats(self, stats):
         summarize_stat = {}
@@ -107,50 +123,25 @@ class CallbackModule(CallbackBase):
         else:
             status = "FAILED"
 
-        data = {
-            'status': status,
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_type': "finish",
-            'ansible_playbook': self.playbook,
-            'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': json.dumps(summarize_stat)  # deprecated field
-        }
+        data = self.base_data.copy()
+        data['ansible_type'] = "finish"
+        data['status'] = status
+        data['ansible_result'] = json.dumps(summarize_stat)  # deprecated field
+
         self.logger.info("FINISH PLAYBOOK | " + json.dumps(summarize_stat), extra=data)
 
     def v2_playbook_on_play_start(self, play):
         self.play_id = str(play._uuid)
 
-        """
-        play.name, if not specified in the playbook, will use the value of the line containing the - (yaml indent)
-        Example:
-
-        ---
-        - name: Play 1
-          hosts: all
-          roles:
-            - whatever.thing
-
-        - hosts: localhost
-          connection: local
-          roles:
-            - whatever.thing
-        ...
-
-        would produce play.name of "Play 1" and "localhost"
-        """
         if play.name:
             self.play_name = play.name
 
-        data = {
-            'status': "OK",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_type': "start",
-            'ansible_playbook': self.playbook,
-            'ansible_play_id': self.play_id,
-            'ansible_play_name': self.play_name,
-        }
+        data = self.base_data.copy()
+        data['ansible_type'] = "start"
+        data['status'] = "OK"
+        data['ansible_play_id'] = self.play_id
+        data['ansible_play_name'] = self.play_name
+
         self.logger.info("START PLAY | " + self.play_name, extra=data)
 
     def v2_playbook_on_task_start(self, task, is_conditional):
@@ -162,156 +153,124 @@ class CallbackModule(CallbackBase):
 
     def v2_runner_on_ok(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
+
+        data = self.base_data.copy()
         if task_name == 'setup':
-            data = {
-                'status': "OK",
-                'host': self.hostname,
-                'session': self.session,
-                'ansible_play_id': self.play_id,
-                'ansible_play_name': self.play_name,
-                'ansible_type': "setup",
-                'ansible_playbook': self.playbook,
-                'ansible_host': result._host.name,
-                'ansible_task': task_name,
-                'ansible_pre_command_output': self.pre_command_output,
-                # deprecated field
-                'ansible_facts': self._dump_results(result._result)
-            }
+            data['ansible_type'] = "setup"
+            data['status'] = "OK"
+            data['ansible_host'] = result._host.name
+            data['ansible_play_id'] = self.play_id
+            data['ansible_play_name'] = self.play_name
+            data['ansible_task'] = task_name
+            data['ansible_facts'] = self._dump_results(result._result)
+
             self.logger.info("SETUP FACTS | " + self._dump_results(result._result), extra=data)
         else:
             if 'changed' in result._result.keys():
-                changed = result._result['changed']
+                data['ansible_changed'] = result._result['changed']
             else:
-                changed = False
-            data = {
-                'status': "OK",
-                'host': self.hostname,
-                'session': self.session,
-                'ansible_play_id': self.play_id,
-                'ansible_play_name': self.play_name,
-                'ansible_changed': changed,
-                'ansible_type': "task",
-                'ansible_playbook': self.playbook,
-                'ansible_host': result._host.name,
-                'ansible_task': task_name,
-                'ansible_task_id': self.task_id,
-                'ansible_pre_command_output': self.pre_command_output,
-                # deprecated field
-                'ansible_result': self._dump_results(result._result)
-            }
+                data['ansible_changed'] = False
+
+            data['ansible_type'] = "task"
+            data['status'] = "OK"
+            data['ansible_host'] = result._host.name
+            data['ansible_play_id'] = self.play_id
+            data['ansible_play_name'] = self.play_name
+            data['ansible_task'] = task_name
+            data['ansible_task_id'] = self.task_id
+            data['ansible_result'] = self._dump_results(result._result)
+
             self.logger.info("TASK OK | " + task_name + " | RESULT |  " + self._dump_results(result._result), extra=data)
 
     def v2_runner_on_skipped(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
-        data = {
-            'status': "SKIPPED",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_play_id': self.play_id,
-            'ansible_play_name': self.play_name,
-            'ansible_type': "task",
-            'ansible_playbook': self.playbook,
-            'ansible_task': task_name,
-            'ansible_task_id': self.task_id,
-            'ansible_pre_command_output': self.pre_command_output,
-            'ansible_host': result._host.name
-        }
+
+        data = self.base_data.copy()
+        data['ansible_type'] = "task"
+        data['status'] = "SKIPPED"
+        data['ansible_host'] = result._host.name
+        data['ansible_play_id'] = self.play_id
+        data['ansible_play_name'] = self.play_name
+        data['ansible_task'] = task_name
+        data['ansible_task_id'] = self.task_id
+        data['ansible_result'] = self._dump_results(result._result)
+
         self.logger.info("TASK SKIPPED | " + task_name, extra=data)
 
     def v2_playbook_on_import_for_host(self, result, imported_file):
-        data = {
-            'status': "IMPORTED",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_play_id': self.play_id,
-            'ansible_play_name': self.play_name,
-            'ansible_type': "import",
-            'ansible_playbook': self.playbook,
-            'ansible_host': result._host.name,
-            'ansible_pre_command_output': self.pre_command_output,
-            'imported_file': imported_file
-        }
+        data = self.base_data.copy()
+        data['ansible_type'] = "import"
+        data['status'] = "IMPORTED"
+        data['ansible_host'] = result._host.name
+        data['ansible_play_id'] = self.play_id
+        data['ansible_play_name'] = self.play_name
+        data['imported_file'] = imported_file
+
         self.logger.info("IMPORT | " + imported_file, extra=data)
 
     def v2_playbook_on_not_import_for_host(self, result, missing_file):
-        data = {
-            'status': "NOT IMPORTED",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_play_id': self.play_id,
-            'ansible_play_name': self.play_name,
-            'ansible_type': "import",
-            'ansible_playbook': self.playbook,
-            'ansible_host': result._host.name,
-            'ansible_pre_command_output': self.pre_command_output,
-            'missing_file': missing_file
-        }
+        data = self.base_data.copy()
+        data['ansible_type'] = "import"
+        data['status'] = "NOT IMPORTED"
+        data['ansible_host'] = result._host.name
+        data['ansible_play_id'] = self.play_id
+        data['ansible_play_name'] = self.play_name
+        data['imported_file'] = missing_file
+
         self.logger.info("NOT IMPORTED | " + missing_file, extra=data)
 
     def v2_runner_on_failed(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ', '')
-        if 'changed' in result._result.keys():
-            changed = result._result['changed']
-        else:
-            changed = False
+        task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
 
-        data = {
-            'status': "FAILED",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_play_id': self.play_id,
-            'ansible_play_name': self.play_name,
-            'ansible_changed': changed,
-            'ansible_type': "task",
-            'ansible_playbook': self.playbook,
-            'ansible_host': result._host.name,
-            'ansible_task': task_name,
-            'ansible_task_id': self.task_id,
-            'ansible_pre_command_output': self.pre_command_output,
-            # deprecated field
-            'ansible_result': self._dump_results(result._result)
-        }
+        data = self.base_data.copy()
+        if 'changed' in result._result.keys():
+            data['ansible_changed'] = result._result['changed']
+        else:
+            data['ansible_changed'] = False
+
+        data['ansible_type'] = "task"
+        data['status'] = "FAILED"
+        data['ansible_host'] = result._host.name
+        data['ansible_play_id'] = self.play_id
+        data['ansible_play_name'] = self.play_name
+        data['ansible_task'] = task_name
+        data['ansible_task_id'] = self.task_id
+        data['ansible_result'] = self._dump_results(result._result)
+
         self.errors += 1
         self.logger.error("TASK FAILED | " + task_name + " | HOST | " + self.hostname +
             " | RESULT | " + self._dump_results(result._result), extra=data)
 
     def v2_runner_on_unreachable(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ', '')
-        data = {
-            'status': "UNREACHABLE",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_play_id': self.play_id,
-            'ansible_play_name': self.play_name,
-            'ansible_type': "task",
-            'ansible_playbook': self.playbook,
-            'ansible_host': result._host.name,
-            'ansible_task': task_name,
-            'ansible_task_id': self.task_id,
-            'ansible_pre_command_output': self.pre_command_output,
-            # deprecated field
-            'ansible_result': self._dump_results(result._result)
-        }
+        task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
+
+        data = self.base_data.copy()
+        data['ansible_type'] = "task"
+        data['status'] = "UNREACHABLE"
+        data['ansible_host'] = result._host.name
+        data['ansible_play_id'] = self.play_id
+        data['ansible_play_name'] = self.play_name
+        data['ansible_task'] = task_name
+        data['ansible_task_id'] = self.task_id
+        data['ansible_result'] = self._dump_results(result._result)
+
+        self.errors += 1
         self.logger.error("UNREACHABLE | " + task_name + " | HOST | " + self.hostname +
             " | RESULT | " + self._dump_results(result._result), extra=data)
 
     def v2_runner_on_async_failed(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ', '')
-        data = {
-            'status': "FAILED",
-            'host': self.hostname,
-            'session': self.session,
-            'ansible_play_id': self.play_id,
-            'ansible_play_name': self.play_name,
-            'ansible_type': "task",
-            'ansible_playbook': self.playbook,
-            'ansible_host': result._host.name,
-            'ansible_task': task_name,
-            'ansible_task_id': self.task_id,
-            'ansible_pre_command_output': self.pre_command_output,
-            # deprecated field
-            'ansible_result': self._dump_results(result._result)
-        }
+        task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
+
+        data = self.base_data.copy()
+        data['ansible_type'] = "task"
+        data['status'] = "FAILED"
+        data['ansible_host'] = result._host.name
+        data['ansible_play_id'] = self.play_id
+        data['ansible_play_name'] = self.play_name
+        data['ansible_task'] = task_name
+        data['ansible_task_id'] = self.task_id
+        data['ansible_result'] = self._dump_results(result._result)
+
         self.errors += 1
         self.logger.error("ASYNC FAILED | " + task_name + " | HOST | " + self.hostname +
             " | RESULT | " + self._dump_results(result._result), extra=data)
