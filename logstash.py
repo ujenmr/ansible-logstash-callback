@@ -121,10 +121,27 @@ class CallbackModule(CallbackBase):
 
     def v2_playbook_on_play_start(self, play):
         self.play_id = str(play._uuid)
+
+        """
+        play.name, if not specified in the playbook, will use the value of the line containing the - (yaml indent)
+        Example:
+
+        ---
+        - name: Play 1
+          hosts: all
+          roles:
+            - whatever.thing
+
+        - hosts: localhost
+          connection: local
+          roles:
+            - whatever.thing
+        ...
+
+        would produce play.name of "Play 1" and "localhost"
+        """
         if play.name:
             self.play_name = play.name
-        else:
-            self.play_name = "WARNING: Play name was not set"
 
         data = {
             'status': "OK",
