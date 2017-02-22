@@ -31,7 +31,6 @@ except ImportError:
 
 from ansible.plugins.callback import CallbackBase
 
-
 class CallbackModule(CallbackBase):
     """
     ansible logstash callback plugin
