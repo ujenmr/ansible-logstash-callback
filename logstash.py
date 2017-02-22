@@ -33,6 +33,7 @@ except ImportError:
 
 from ansible.plugins.callback import CallbackBase
 
+
 class CallbackModule(CallbackBase):
     """
     ansible logstash callback plugin
@@ -71,7 +72,7 @@ class CallbackModule(CallbackBase):
             self._display.warning("The required python-logstash is not installed. "
                 "pip install python-logstash")
         else:
-            self.logger =  logging.getLogger('python-logstash-logger')
+            self.logger = logging.getLogger('python-logstash-logger')
             self.logger.setLevel(logging.DEBUG)
 
             self.handler = logstash.TCPLogstashHandler(
@@ -96,7 +97,7 @@ class CallbackModule(CallbackBase):
             'ansible_type': "start",
             'ansible_playbook': self.playbook,
         }
-        self.logger.info("START " + self.playbook, extra = data)
+        self.logger.info("START " + self.playbook, extra=data)
 
     def v2_playbook_on_stats(self, stats):
         summarize_stat = {}
@@ -117,7 +118,7 @@ class CallbackModule(CallbackBase):
             'ansible_pre_command_output': self.pre_command_output,
             'ansible_result': json.dumps(summarize_stat), # deprecated field
         }
-        self.logger.info(json.dumps(summarize_stat), extra = data)
+        self.logger.info(json.dumps(summarize_stat), extra=data)
 
     def v2_playbook_on_play_start(self, play):
         self.play_id = str(play._uuid)
@@ -160,8 +161,8 @@ class CallbackModule(CallbackBase):
     Tasks and handler tasks are dealt with here
     '''
     def v2_runner_on_ok(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
-        task_name = str(result._task).replace('HANDLER: ','')
+        task_name = str(result._task).replace('TASK: ', '')
+        task_name = str(result._task).replace('HANDLER: ', '')
         if task_name == 'setup':
             data = {
                 'status': "OK",
@@ -174,7 +175,7 @@ class CallbackModule(CallbackBase):
                 'ansible_host': result._host.name,
                 'ansible_task': task_name,
                 'ansible_pre_command_output': self.pre_command_output,
-                'ansible_facts': self._dump_results(result._result) # deprecated field
+                'ansible_facts': self._dump_results(result._result)  # deprecated field
             }
         else:
             if 'changed' in result._result.keys():
@@ -194,12 +195,12 @@ class CallbackModule(CallbackBase):
                 'ansible_task': task_name,
                 'ansible_task_id': self.task_id,
                 'ansible_pre_command_output': self.pre_command_output,
-                'ansible_result': self._dump_results(result._result) # deprecated field
+                'ansible_result': self._dump_results(result._result)  # deprecated field
             }
-        self.logger.info(self._dump_results(result._result), extra = data)
+        self.logger.info(self._dump_results(result._result), extra=data)
 
     def v2_runner_on_skipped(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('TASK: ', '')
         data = {
             'status': "SKIPPED",
             'host': self.hostname,
@@ -213,7 +214,7 @@ class CallbackModule(CallbackBase):
             'ansible_pre_command_output': self.pre_command_output,
             'ansible_host': result._host.name
         }
-        self.logger.info("SKIPPED " + task_name, extra = data)
+        self.logger.info("SKIPPED " + task_name, extra=data)
 
     def v2_playbook_on_import_for_host(self, result, imported_file):
         data = {
@@ -228,7 +229,7 @@ class CallbackModule(CallbackBase):
             'ansible_pre_command_output': self.pre_command_output,
             'imported_file': imported_file
         }
-        self.logger.info("IMPORT " + imported_file, extra = data)
+        self.logger.info("IMPORT " + imported_file, extra=data)
 
     def v2_playbook_on_not_import_for_host(self, result, missing_file):
         data = {
@@ -243,14 +244,15 @@ class CallbackModule(CallbackBase):
             'ansible_pre_command_output': self.pre_command_output,
             'missing_file': missing_file
         }
-        self.logger.info("NOT IMPORTED " + missing_file, extra = data)
+        self.logger.info("NOT IMPORTED " + missing_file, extra=data)
 
     def v2_runner_on_failed(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('TASK: ', '')
         if 'changed' in result._result.keys():
             changed = result._result['changed']
         else:
             changed = False
+
         data = {
             'status': "FAILED",
             'host': self.hostname,
@@ -264,13 +266,13 @@ class CallbackModule(CallbackBase):
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result) # deprecated field
+            'ansible_result': self._dump_results(result._result)  # deprecated field
         }
         self.errors += 1
-        self.logger.error(self._dump_results(result._result), extra = data)
+        self.logger.error(self._dump_results(result._result), extra=data)
 
     def v2_runner_on_unreachable(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('TASK: ', '')
         data = {
             'status': "UNREACHABLE",
             'host': self.hostname,
@@ -283,12 +285,12 @@ class CallbackModule(CallbackBase):
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result) # deprecated field
+            'ansible_result': self._dump_results(result._result)  # deprecated field
         }
-        self.logger.error(self._dump_results(result._result), extra = data)
+        self.logger.error(self._dump_results(result._result), extra=data)
 
     def v2_runner_on_async_failed(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('TASK: ', '')
         data = {
             'status': "FAILED",
             'host': self.hostname,
@@ -301,7 +303,7 @@ class CallbackModule(CallbackBase):
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result) # deprecated field
+            'ansible_result': self._dump_results(result._result)  # deprecated field
         }
         self.errors += 1
-        self.logger.error(self._dump_results(result._result), extra = data)
+        self.logger.error(self._dump_results(result._result), extra=data)
