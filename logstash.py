@@ -14,7 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -22,7 +21,6 @@ import os
 import json
 import socket
 import uuid
-
 import logging
 
 try:
@@ -32,6 +30,7 @@ except ImportError:
     HAS_LOGSTASH = False
 
 from ansible.plugins.callback import CallbackBase
+
 
 class CallbackModule(CallbackBase):
     """
@@ -69,9 +68,9 @@ class CallbackModule(CallbackBase):
         if not HAS_LOGSTASH:
             self.disabled = True
             self._display.warning("The required python-logstash is not installed. "
-                "pip install python-logstash")
+                                  "pip install python-logstash")
         else:
-            self.logger =  logging.getLogger('python-logstash-logger')
+            self.logger = logging.getLogger('python-logstash-logger')
             self.logger.setLevel(logging.DEBUG)
 
             self.handler = logstash.TCPLogstashHandler(
@@ -84,7 +83,8 @@ class CallbackModule(CallbackBase):
             self.logger.addHandler(self.handler)
             self.hostname = socket.gethostname()
             self.session = str(uuid.uuid1())
-            self.pre_command_output = os.popen(os.getenv("LOGSTASH_PRE_COMMAND", "ansible --version | head -1")).read()
+            self.pre_command_output = os.popen(os.getenv(
+                "LOGSTASH_PRE_COMMAND", "ansible --version | head -1 | tr '\n' ' ' | sed -e 's/ansible//gI' -e 's/[[:space:]]//g'")).read()
             self.errors = 0
 
     def v2_playbook_on_start(self, playbook):
@@ -96,7 +96,7 @@ class CallbackModule(CallbackBase):
             'ansible_type': "start",
             'ansible_playbook': self.playbook,
         }
-        self.logger.info("START " + self.playbook, extra = data)
+        self.logger.info("START " + self.playbook, extra=data)
 
     def v2_playbook_on_stats(self, stats):
         summarize_stat = {}
@@ -115,12 +115,44 @@ class CallbackModule(CallbackBase):
             'ansible_type': "finish",
             'ansible_playbook': self.playbook,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': json.dumps(summarize_stat), # deprecated field
+            'ansible_result': json.dumps(summarize_stat)  # deprecated field
         }
-        self.logger.info(json.dumps(summarize_stat), extra = data)
+        self.logger.info(json.dumps(summarize_stat), extra=data)
 
     def v2_playbook_on_play_start(self, play):
         self.play_id = str(play._uuid)
+
+        """
+        play.name, if not specified in the playbook, will use the value of the line containing the - (yaml indent)
+        Example:
+
+        ---
+        - name: Play 1
+          hosts: all
+          roles:
+            - whatever.thing
+
+        - hosts: localhost
+          connection: local
+          roles:
+            - whatever.thing
+        ...
+
+        would produce play.name of "Play 1" and "localhost"
+        """
+        if play.name:
+            self.play_name = play.name
+
+        data = {
+            'status': "OK",
+            'host': self.hostname,
+            'session': self.session,
+            'ansible_type': "start",
+            'ansible_playbook': self.playbook,
+            'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
+        }
+        self.logger.info("START PLAY", extra=data)
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         self.task_id = str(task._uuid)
@@ -128,21 +160,24 @@ class CallbackModule(CallbackBase):
     '''
     Tasks and handler tasks are dealt with here
     '''
+
     def v2_runner_on_ok(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
-        task_name = str(result._task).replace('HANDLER: ','')
+        task_name = str(result._task).replace('TASK: ', '')
+        task_name = str(result._task).replace('HANDLER: ', '')
         if task_name == 'setup':
             data = {
                 'status': "OK",
                 'host': self.hostname,
                 'session': self.session,
                 'ansible_play_id': self.play_id,
+                'ansible_play_name': self.play_name,
                 'ansible_type': "setup",
                 'ansible_playbook': self.playbook,
                 'ansible_host': result._host.name,
                 'ansible_task': task_name,
                 'ansible_pre_command_output': self.pre_command_output,
-                'ansible_facts': self._dump_results(result._result) # deprecated field
+                # deprecated field
+                'ansible_facts': self._dump_results(result._result)
             }
         else:
             if 'changed' in result._result.keys():
@@ -154,6 +189,7 @@ class CallbackModule(CallbackBase):
                 'host': self.hostname,
                 'session': self.session,
                 'ansible_play_id': self.play_id,
+                'ansible_play_name': self.play_name,
                 'ansible_changed': changed,
                 'ansible_type': "task",
                 'ansible_playbook': self.playbook,
@@ -161,17 +197,19 @@ class CallbackModule(CallbackBase):
                 'ansible_task': task_name,
                 'ansible_task_id': self.task_id,
                 'ansible_pre_command_output': self.pre_command_output,
-                'ansible_result': self._dump_results(result._result) # deprecated field
+                # deprecated field
+                'ansible_result': self._dump_results(result._result)
             }
-        self.logger.info(self._dump_results(result._result), extra = data)
+        self.logger.info(self._dump_results(result._result), extra=data)
 
     def v2_runner_on_skipped(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('TASK: ', '')
         data = {
             'status': "SKIPPED",
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_task': task_name,
@@ -179,7 +217,7 @@ class CallbackModule(CallbackBase):
             'ansible_pre_command_output': self.pre_command_output,
             'ansible_host': result._host.name
         }
-        self.logger.info("SKIPPED " + task_name, extra = data)
+        self.logger.info("SKIPPED " + task_name, extra=data)
 
     def v2_playbook_on_import_for_host(self, result, imported_file):
         data = {
@@ -187,13 +225,14 @@ class CallbackModule(CallbackBase):
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "import",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_pre_command_output': self.pre_command_output,
             'imported_file': imported_file
         }
-        self.logger.info("IMPORT " + imported_file, extra = data)
+        self.logger.info("IMPORT " + imported_file, extra=data)
 
     def v2_playbook_on_not_import_for_host(self, result, missing_file):
         data = {
@@ -201,25 +240,28 @@ class CallbackModule(CallbackBase):
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "import",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_pre_command_output': self.pre_command_output,
             'missing_file': missing_file
         }
-        self.logger.info("NOT IMPORTED " + missing_file, extra = data)
+        self.logger.info("NOT IMPORTED " + missing_file, extra=data)
 
     def v2_runner_on_failed(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('TASK: ', '')
         if 'changed' in result._result.keys():
             changed = result._result['changed']
         else:
             changed = False
+
         data = {
             'status': "FAILED",
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_changed': changed,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
@@ -227,42 +269,47 @@ class CallbackModule(CallbackBase):
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result) # deprecated field
+            # deprecated field
+            'ansible_result': self._dump_results(result._result)
         }
         self.errors += 1
-        self.logger.error(self._dump_results(result._result), extra = data)
+        self.logger.error(self._dump_results(result._result), extra=data)
 
     def v2_runner_on_unreachable(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('TASK: ', '')
         data = {
             'status': "UNREACHABLE",
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result) # deprecated field
+            # deprecated field
+            'ansible_result': self._dump_results(result._result)
         }
-        self.logger.error(self._dump_results(result._result), extra = data)
+        self.logger.error(self._dump_results(result._result), extra=data)
 
     def v2_runner_on_async_failed(self, result, **kwargs):
-        task_name = str(result._task).replace('TASK: ','')
+        task_name = str(result._task).replace('TASK: ', '')
         data = {
             'status': "FAILED",
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result) # deprecated field
+            # deprecated field
+            'ansible_result': self._dump_results(result._result)
         }
         self.errors += 1
-        self.logger.error(self._dump_results(result._result), extra = data)
+        self.logger.error(self._dump_results(result._result), extra=data)
