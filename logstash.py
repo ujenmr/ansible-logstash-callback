@@ -121,6 +121,20 @@ class CallbackModule(CallbackBase):
 
     def v2_playbook_on_play_start(self, play):
         self.play_id = str(play._uuid)
+        if play.name:
+            self.play_name = play.name
+        else:
+            self.play_name = "WARNING: Play name was not set"
+
+        data = {
+            'status': "OK",
+            'host': self.hostname,
+            'session': self.session,
+            'ansible_type': "start",
+            'ansible_playbook': self.playbook,
+            'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
+        }
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         self.task_id = str(task._uuid)
@@ -137,6 +151,7 @@ class CallbackModule(CallbackBase):
                 'host': self.hostname,
                 'session': self.session,
                 'ansible_play_id': self.play_id,
+                'ansible_play_name': self.play_name,
                 'ansible_type': "setup",
                 'ansible_playbook': self.playbook,
                 'ansible_host': result._host.name,
@@ -154,6 +169,7 @@ class CallbackModule(CallbackBase):
                 'host': self.hostname,
                 'session': self.session,
                 'ansible_play_id': self.play_id,
+                'ansible_play_name': self.play_name,
                 'ansible_changed': changed,
                 'ansible_type': "task",
                 'ansible_playbook': self.playbook,
@@ -172,6 +188,7 @@ class CallbackModule(CallbackBase):
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_task': task_name,
@@ -187,6 +204,7 @@ class CallbackModule(CallbackBase):
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "import",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
@@ -201,6 +219,7 @@ class CallbackModule(CallbackBase):
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "import",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
@@ -220,6 +239,7 @@ class CallbackModule(CallbackBase):
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_changed': changed,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
@@ -239,6 +259,7 @@ class CallbackModule(CallbackBase):
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
@@ -256,6 +277,7 @@ class CallbackModule(CallbackBase):
             'host': self.hostname,
             'session': self.session,
             'ansible_play_id': self.play_id,
+            'ansible_play_name': self.play_name,
             'ansible_type': "task",
             'ansible_playbook': self.playbook,
             'ansible_host': result._host.name,
