@@ -84,7 +84,7 @@ class CallbackModule(CallbackBase):
             self.logger.addHandler(self.handler)
             self.hostname = socket.gethostname()
             self.session = str(uuid.uuid1())
-            self.pre_command_output = os.popen(os.getenv("LOGSTASH_PRE_COMMAND", "ansible --version | head -1")).read()
+            self.pre_command_output = os.popen(os.getenv("LOGSTASH_PRE_COMMAND", "ansible --version | head -1 | tr '\n' ' ' | sed -e 's/ansible//gI' -e 's/[[:space:]]//g'")).read()
             self.errors = 0
 
     def v2_playbook_on_start(self, playbook):
