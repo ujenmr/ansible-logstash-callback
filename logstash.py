@@ -14,7 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -22,7 +21,6 @@ import os
 import json
 import socket
 import uuid
-
 import logging
 
 try:
@@ -116,7 +114,7 @@ class CallbackModule(CallbackBase):
             'ansible_type': "finish",
             'ansible_playbook': self.playbook,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': json.dumps(summarize_stat), # deprecated field
+            'ansible_result': json.dumps(summarize_stat)  # deprecated field
         }
         self.logger.info(json.dumps(summarize_stat), extra=data)
 
