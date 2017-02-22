@@ -68,7 +68,7 @@ class CallbackModule(CallbackBase):
         if not HAS_LOGSTASH:
             self.disabled = True
             self._display.warning("The required python-logstash is not installed. "
-                "pip install python-logstash")
+                                  "pip install python-logstash")
         else:
             self.logger = logging.getLogger('python-logstash-logger')
             self.logger.setLevel(logging.DEBUG)
@@ -83,7 +83,8 @@ class CallbackModule(CallbackBase):
             self.logger.addHandler(self.handler)
             self.hostname = socket.gethostname()
             self.session = str(uuid.uuid1())
-            self.pre_command_output = os.popen(os.getenv("LOGSTASH_PRE_COMMAND", "ansible --version | head -1 | tr '\n' ' ' | sed -e 's/ansible//gI' -e 's/[[:space:]]//g'")).read()
+            self.pre_command_output = os.popen(os.getenv(
+                "LOGSTASH_PRE_COMMAND", "ansible --version | head -1 | tr '\n' ' ' | sed -e 's/ansible//gI' -e 's/[[:space:]]//g'")).read()
             self.errors = 0
 
     def v2_playbook_on_start(self, playbook):
@@ -158,6 +159,7 @@ class CallbackModule(CallbackBase):
     '''
     Tasks and handler tasks are dealt with here
     '''
+
     def v2_runner_on_ok(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '')
         task_name = str(result._task).replace('HANDLER: ', '')
@@ -173,7 +175,8 @@ class CallbackModule(CallbackBase):
                 'ansible_host': result._host.name,
                 'ansible_task': task_name,
                 'ansible_pre_command_output': self.pre_command_output,
-                'ansible_facts': self._dump_results(result._result)  # deprecated field
+                # deprecated field
+                'ansible_facts': self._dump_results(result._result)
             }
         else:
             if 'changed' in result._result.keys():
@@ -193,7 +196,8 @@ class CallbackModule(CallbackBase):
                 'ansible_task': task_name,
                 'ansible_task_id': self.task_id,
                 'ansible_pre_command_output': self.pre_command_output,
-                'ansible_result': self._dump_results(result._result)  # deprecated field
+                # deprecated field
+                'ansible_result': self._dump_results(result._result)
             }
         self.logger.info(self._dump_results(result._result), extra=data)
 
@@ -264,7 +268,8 @@ class CallbackModule(CallbackBase):
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result)  # deprecated field
+            # deprecated field
+            'ansible_result': self._dump_results(result._result)
         }
         self.errors += 1
         self.logger.error(self._dump_results(result._result), extra=data)
@@ -283,7 +288,8 @@ class CallbackModule(CallbackBase):
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result)  # deprecated field
+            # deprecated field
+            'ansible_result': self._dump_results(result._result)
         }
         self.logger.error(self._dump_results(result._result), extra=data)
 
@@ -301,7 +307,8 @@ class CallbackModule(CallbackBase):
             'ansible_task': task_name,
             'ansible_task_id': self.task_id,
             'ansible_pre_command_output': self.pre_command_output,
-            'ansible_result': self._dump_results(result._result)  # deprecated field
+            # deprecated field
+            'ansible_result': self._dump_results(result._result)
         }
         self.errors += 1
         self.logger.error(self._dump_results(result._result), extra=data)
