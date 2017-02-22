@@ -152,6 +152,7 @@ class CallbackModule(CallbackBase):
             'ansible_play_id': self.play_id,
             'ansible_play_name': self.play_name,
         }
+        self.logger.info("START PLAY", extra=data)
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         self.task_id = str(task._uuid)
