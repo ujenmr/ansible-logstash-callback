@@ -61,7 +61,7 @@ curl -s -XGET localhost:9200/_template
 
 Load the template
 ```
-curl -s -XPUT 'http://localhost:9200/_template/ansible' -d@ansible.template
+curl -s -H 'Content-Type: application/json' -XPUT 'http://localhost:9200/_template/ansible' -d@ansible.template
 ```
 
 - - - -
