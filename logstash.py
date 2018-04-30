@@ -1,27 +1,50 @@
-# (C) 2016, Ievgen Khmelenko <ujenmr@gmail.com>
-#
-# This file is part of Ansible
-#
-# Ansible is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Ansible is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+# (C) 2018, Yevhen Khmelenko <ujenmr@gmail.com>
+# (C) 2017 Ansible Project
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
+
+DOCUMENTATION = '''
+    callback: logstash
+    type: notification
+    author: Yevhen Khmelenko <ujenmr@gmail.com>
+    short_description: Sends events to Logstash
+    description:
+      - This callback will report facts and task events to Logstash https://www.elastic.co/products/logstash
+    version_added: "2.3"
+    requirements:
+      - whitelisting in configuration
+      - logstash (python library)
+    options:
+      server:
+        description: Address of the Logstash server
+        env:
+          - name: LOGSTASH_SERVER
+        default: localhost
+      port:
+        description: Port on which logstash is listening
+        env:
+          - name: LOGSTASH_PORT
+        default: 5000
+      pre_command:
+        description: Executes command before run and result put to ansible_pre_command_output field
+        env:
+          - name: LOGSTASH_PRE_COMMAND
+        default: "ansible --version | head -1"
+      type:
+        description: Message type
+        env:
+          - name: LOGSTASH_TYPE
+        default: ansible
+'''
 
 import os
 import json
 import socket
 import uuid
 import logging
+from datetime import datetime
 
 try:
     import logstash
@@ -37,13 +60,12 @@ except ImportError:
 
 from ansible.plugins.callback import CallbackBase
 
+
 class CallbackModule(CallbackBase):
     """
     ansible logstash callback plugin
     ansible.cfg:
-        callback_plugins   = <path_to_callback_plugins_folder>
         callback_whitelist = logstash
-    and put the plugin in <path_to_callback_plugins_folder>
 
     logstash config:
         input {
@@ -55,13 +77,8 @@ class CallbackModule(CallbackBase):
 
     Requires:
         python-logstash
-
-    This plugin makes use of the following environment variables:
-        LOGSTASH_SERVER      (optional): defaults is "localhost"
-        LOGSTASH_PORT        (optional): defaults is "5000"
-        LOGSTASH_TYPE        (optional): defaults is "ansible"
-        LOGSTASH_PRE_COMMAND (optional): defaults is "ansible --version | head -1" execute command before run and result put ansible_pre_command_output field
     """
+
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE = 'aggregate'
     CALLBACK_NAME = 'logstash'
@@ -105,6 +122,7 @@ class CallbackModule(CallbackBase):
                 self.base_data['ansible_tags'] = self._options.tags
                 self.base_data['ansible_skip_tags'] = self._options.skip_tags
                 self.base_data['inventory'] = self._options.inventory
+        self.start_time = datetime.utcnow()
 
     def v2_playbook_on_start(self, playbook):
         data = self.base_data.copy()
@@ -114,6 +132,8 @@ class CallbackModule(CallbackBase):
         self.logger.info("START PLAYBOOK | " + data['ansible_playbook'], extra=data)
 
     def v2_playbook_on_stats(self, stats):
+        end_time = datetime.utcnow()
+        runtime = end_time - self.start_time
         summarize_stat = {}
         for host in stats.processed.keys():
             summarize_stat[host] = stats.summarize(host)
@@ -126,6 +146,7 @@ class CallbackModule(CallbackBase):
         data = self.base_data.copy()
         data['ansible_type'] = "finish"
         data['status'] = status
+        data['ansible_playbook_duration'] = runtime.total_seconds()
         data['ansible_result'] = json.dumps(summarize_stat)  # deprecated field
 
         self.logger.info("FINISH PLAYBOOK | " + json.dumps(summarize_stat), extra=data)
@@ -239,7 +260,7 @@ class CallbackModule(CallbackBase):
 
         self.errors += 1
         self.logger.error("TASK FAILED | " + task_name + " | HOST | " + self.hostname +
-            " | RESULT | " + self._dump_results(result._result), extra=data)
+                          " | RESULT | " + self._dump_results(result._result), extra=data)
 
     def v2_runner_on_unreachable(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -256,7 +277,7 @@ class CallbackModule(CallbackBase):
 
         self.errors += 1
         self.logger.error("UNREACHABLE | " + task_name + " | HOST | " + self.hostname +
-            " | RESULT | " + self._dump_results(result._result), extra=data)
+                          " | RESULT | " + self._dump_results(result._result), extra=data)
 
     def v2_runner_on_async_failed(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -273,4 +294,4 @@ class CallbackModule(CallbackBase):
 
         self.errors += 1
         self.logger.error("ASYNC FAILED | " + task_name + " | HOST | " + self.hostname +
-            " | RESULT | " + self._dump_results(result._result), extra=data)
+                          " | RESULT | " + self._dump_results(result._result), extra=data)
