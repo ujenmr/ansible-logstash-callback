@@ -31,12 +31,46 @@ DOCUMENTATION = '''
         description: Executes command before run and result put to ansible_pre_command_output field
         env:
           - name: LOGSTASH_PRE_COMMAND
-        default: "ansible --version | head -1"
+        version_added: "2.6"
       type:
         description: Message type
         env:
           - name: LOGSTASH_TYPE
         default: ansible
+'''
+
+EXAMPLES = '''
+examples: >
+    1. Install python module python-logstash
+        pip install python-logstash
+
+    2. Enable callback plugin
+    ansible.cfg:
+        [defaults]
+            callback_whitelist = logstash
+
+    3. Setup logstash connection via environment variables or ansible.cfg
+    environment variables:
+        export LOGSTASH_SERVER=logstash.example.com
+        export LOGSTASH_PORT=5000
+        export LOGSTASH_PRE_COMMAND="git rev-parse HEAD"
+        export LOGSTASH_TYPE=ansible
+
+    or same in ansible.cfg:
+        [callback_logstash]
+        server = logstash.example.com
+        port = 5000
+        pre_command = git rev-parse HEAD
+        type = ansible
+
+    4. Add to logstash tcp-input
+        logstash config:
+            input {
+                tcp {
+                    port => 5000
+                    codec => json
+                }
+            }
 '''
 
 import os
@@ -52,32 +86,10 @@ try:
 except ImportError:
     HAS_LOGSTASH = False
 
-try:
-    from __main__ import cli
-except ImportError:
-    # using API w/o cli
-    cli = False
-
 from ansible.plugins.callback import CallbackBase
 
 
 class CallbackModule(CallbackBase):
-    """
-    ansible logstash callback plugin
-    ansible.cfg:
-        callback_whitelist = logstash
-
-    logstash config:
-        input {
-            tcp {
-                port => 5000
-                codec => json
-            }
-        }
-
-    Requires:
-        python-logstash
-    """
 
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE = 'aggregate'
@@ -91,38 +103,65 @@ class CallbackModule(CallbackBase):
             self.disabled = True
             self._display.warning("The required python-logstash is not installed. "
                                   "pip install python-logstash")
-        else:
+
+        self.start_time = datetime.utcnow()
+
+    def _init_plugin(self):
+        if not self.disabled:
             self.logger = logging.getLogger('python-logstash-logger')
             self.logger.setLevel(logging.DEBUG)
 
             self.handler = logstash.TCPLogstashHandler(
-                os.getenv('LOGSTASH_SERVER', 'localhost'),
-                int(os.getenv('LOGSTASH_PORT', 5000)),
+                self.ls_server,
+                self.ls_port,
                 version=1,
-                message_type=os.getenv('LOGSTASH_TYPE', 'ansible')
+                message_type=self.ls_type
             )
 
             self.logger.addHandler(self.handler)
             self.hostname = socket.gethostname()
-            self.session = str(uuid.uuid1())
-            self.pre_command_output = os.popen(os.getenv(
-                "LOGSTASH_PRE_COMMAND", "ansible --version | head -1")).read()
+            self.session = str(uuid.uuid4())
             self.errors = 0
 
             self.base_data = {
                 'session': self.session,
-                'ansible_pre_command_output': self.pre_command_output,
                 'host': self.hostname
             }
 
-            self.options = {}
-            if cli:
-                self._options = cli.options
+            if self.ls_pre_command is not None:
+                self.base_data['ansible_pre_command_output'] = os.popen(
+                    self.ls_pre_command).read()
+
+            if self._options is not None:
                 self.base_data['ansible_checkmode'] = self._options.check
                 self.base_data['ansible_tags'] = self._options.tags
                 self.base_data['ansible_skip_tags'] = self._options.skip_tags
                 self.base_data['inventory'] = self._options.inventory
-        self.start_time = datetime.utcnow()
+
+    def set_options(self, task_keys=None, var_options=None, direct=None):
+        super(CallbackModule, self).set_options(task_keys=task_keys, var_options=var_options, direct=direct)
+
+        try:
+            self.ls_server = self.get_option('server')
+        except KeyError:
+            self.ls_server = "localhost"
+
+        try:
+            self.ls_port = int(self.get_option('port'))
+        except KeyError:
+            self.ls_port = 5000
+
+        try:
+            self.ls_type = self.get_option('type')
+        except KeyError:
+            self.ls_type = "ansible"
+
+        try:
+            self.ls_pre_command = self.get_option('pre_command')
+        except KeyError:
+            pass
+
+        self._init_plugin()
 
     def v2_playbook_on_start(self, playbook):
         data = self.base_data.copy()
