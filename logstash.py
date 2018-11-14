@@ -19,21 +19,33 @@ DOCUMENTATION = '''
     options:
       server:
         description: Address of the Logstash server
+        ini:
+          - section: callback_logstash
+            key: server
         env:
           - name: LOGSTASH_SERVER
         default: localhost
       port:
         description: Port on which logstash is listening
+        ini:
+          - section: callback_logstash
+            key: port
         env:
           - name: LOGSTASH_PORT
         default: 5000
       pre_command:
         description: Executes command before run and result put to ansible_pre_command_output field
+        ini:
+          - section: callback_logstash
+            key: pre_command
         env:
           - name: LOGSTASH_PRE_COMMAND
         version_added: "2.6"
       type:
         description: Message type
+        ini:
+          - section: callback_logstash
+            key: type
         env:
           - name: LOGSTASH_TYPE
         default: ansible
