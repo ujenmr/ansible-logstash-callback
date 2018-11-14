@@ -9,8 +9,8 @@ pip install python-logstash
 
 Append the following to the `[defaults]` section of your `ansible.cfg`
 ```
-    callback_plugins   = <path_to_callback_plugins_folder>
-    callback_whitelist = logstash
+callback_plugins   = <path_to_callback_plugins_folder>
+callback_whitelist = logstash
 ```
 
 Put the `logstash` plugin from this git repository into the path_to_callback_plugins_folder as defined above.
@@ -20,6 +20,15 @@ This plugin makes use of the following environment variables:
 * `LOGSTASH_PORT`          (optional): defaults to 5000
 * `LOGSTASH_TYPE`          (optional): defaults to ansible
 * `LOGSTASH_PRE_COMMAND`   (optional): defaults is "ansible --version | head -1" execute command before run and result put `ansible_pre_command_output` field
+
+Or you can use the `[callback_logstash]` section of your `ansible.cfg`
+```
+[callback_logstash]
+server = localhost
+port = 5000
+type = ansible
+pre_command = git rev-parse HEAD
+```
 
 ### Logstash section
 
