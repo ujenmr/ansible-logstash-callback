@@ -5,7 +5,7 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-DOCUMENTATION = '''
+DOCUMENTATION = r'''
     callback: logstash
     type: notification
     author: Yevhen Khmelenko <ujenmr@gmail.com>
@@ -51,41 +51,28 @@ DOCUMENTATION = '''
         default: ansible
 '''
 
-EXAMPLES = '''
-examples: >
-    1. Install python module python3-logstash
-       python3:
-        pip install python3-logstash
-       python2:
-        pip install pythons-logstash
+EXAMPLES = r'''
+ansible.cfg: >
+    # Enable Callback plugin
+    [defaults]
+        callback_whitelist = logstash
 
-    2. Enable callback plugin
-    ansible.cfg:
-        [defaults]
-            callback_whitelist = logstash
-
-    3. Setup logstash connection via environment variables or ansible.cfg
-    environment variables:
-        export LOGSTASH_SERVER=logstash.example.com
-        export LOGSTASH_PORT=5000
-        export LOGSTASH_PRE_COMMAND="git rev-parse HEAD"
-        export LOGSTASH_TYPE=ansible
-
-    or same in ansible.cfg:
-        [callback_logstash]
+    [callback_logstash]
         server = logstash.example.com
         port = 5000
         pre_command = git rev-parse HEAD
         type = ansible
 
-    4. Add to logstash tcp-input
-        logstash config:
-            input {
-                tcp {
-                    port => 5000
-                    codec => json
-                }
+11-input-tcp.conf: >
+    # Enable Logstash TCP Input
+    input {
+            tcp {
+                port => 5000
+                codec => json
+                add_field => { "[@metadata][beat]" => "notify" }
+                add_field => { "[@metadata][type]" => "ansible" }
             }
+        }
 '''
 
 import os
