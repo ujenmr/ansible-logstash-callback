@@ -180,7 +180,7 @@ class CallbackModule(CallbackBase):
         data['ansible_type'] = "start"
         data['status'] = "OK"
         data['ansible_playbook'] = playbook._file_name
-        self.logger.info("START PLAYBOOK | " + data['ansible_playbook'], extra=data)
+        self.logger.info("START PLAYBOOK | %s", data['ansible_playbook'], extra=data)
 
     def v2_playbook_on_stats(self, stats):
         end_time = datetime.utcnow()
@@ -200,7 +200,7 @@ class CallbackModule(CallbackBase):
         data['ansible_playbook_duration'] = runtime.total_seconds()
         data['ansible_result'] = json.dumps(summarize_stat)  # deprecated field
 
-        self.logger.info("FINISH PLAYBOOK | " + json.dumps(summarize_stat), extra=data)
+        self.logger.info("FINISH PLAYBOOK | %s", json.dumps(summarize_stat), extra=data)
 
     def v2_playbook_on_play_start(self, play):
         self.play_id = str(play._uuid)
@@ -214,7 +214,7 @@ class CallbackModule(CallbackBase):
         data['ansible_play_id'] = self.play_id
         data['ansible_play_name'] = self.play_name
 
-        self.logger.info("START PLAY | " + self.play_name, extra=data)
+        self.logger.info("START PLAY | %s", self.play_name, extra=data)
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         self.task_id = str(task._uuid)
@@ -236,7 +236,7 @@ class CallbackModule(CallbackBase):
             data['ansible_task'] = task_name
             data['ansible_facts'] = self._dump_results(result._result)
 
-            self.logger.info("SETUP FACTS | " + self._dump_results(result._result), extra=data)
+            self.logger.info("SETUP FACTS | %s", self._dump_results(result._result), extra=data)
         else:
             if 'changed' in result._result.keys():
                 data['ansible_changed'] = result._result['changed']
@@ -252,7 +252,8 @@ class CallbackModule(CallbackBase):
             data['ansible_task_id'] = self.task_id
             data['ansible_result'] = self._dump_results(result._result)
 
-            self.logger.info("TASK OK | " + task_name + " | RESULT |  " + self._dump_results(result._result), extra=data)
+            self.logger.info("TASK OK | %s | RESULT | %s",
+                                task_name, self._dump_results(result._result), extra=data)
 
     def v2_runner_on_skipped(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -267,7 +268,7 @@ class CallbackModule(CallbackBase):
         data['ansible_task_id'] = self.task_id
         data['ansible_result'] = self._dump_results(result._result)
 
-        self.logger.info("TASK SKIPPED | " + task_name, extra=data)
+        self.logger.info("TASK SKIPPED | %s", task_name, extra=data)
 
     def v2_playbook_on_import_for_host(self, result, imported_file):
         data = self.base_data.copy()
@@ -278,7 +279,7 @@ class CallbackModule(CallbackBase):
         data['ansible_play_name'] = self.play_name
         data['imported_file'] = imported_file
 
-        self.logger.info("IMPORT | " + imported_file, extra=data)
+        self.logger.info("IMPORT | %s", imported_file, extra=data)
 
     def v2_playbook_on_not_import_for_host(self, result, missing_file):
         data = self.base_data.copy()
@@ -289,7 +290,7 @@ class CallbackModule(CallbackBase):
         data['ansible_play_name'] = self.play_name
         data['imported_file'] = missing_file
 
-        self.logger.info("NOT IMPORTED | " + missing_file, extra=data)
+        self.logger.info("NOT IMPORTED | %s", missing_file, extra=data)
 
     def v2_runner_on_failed(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -310,8 +311,9 @@ class CallbackModule(CallbackBase):
         data['ansible_result'] = self._dump_results(result._result)
 
         self.errors += 1
-        self.logger.error("TASK FAILED | " + task_name + " | HOST | " + self.hostname +
-                          " | RESULT | " + self._dump_results(result._result), extra=data)
+        self.logger.error("TASK FAILED | %s | HOST | %s | RESULT | %s",
+                            task_name, self.hostname,
+                            self._dump_results(result._result), extra=data)
 
     def v2_runner_on_unreachable(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -327,8 +329,9 @@ class CallbackModule(CallbackBase):
         data['ansible_result'] = self._dump_results(result._result)
 
         self.errors += 1
-        self.logger.error("UNREACHABLE | " + task_name + " | HOST | " + self.hostname +
-                          " | RESULT | " + self._dump_results(result._result), extra=data)
+        self.logger.error("UNREACHABLE | %s | HOST | %s | RESULT | %s",
+                            task_name, self.hostname,
+                            self._dump_results(result._result), extra=data)
 
     def v2_runner_on_async_failed(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -344,5 +347,6 @@ class CallbackModule(CallbackBase):
         data['ansible_result'] = self._dump_results(result._result)
 
         self.errors += 1
-        self.logger.error("ASYNC FAILED | " + task_name + " | HOST | " + self.hostname +
-                          " | RESULT | " + self._dump_results(result._result), extra=data)
+        self.logger.error("ASYNC FAILED | %s | HOST | %s | RESULT | %s",
+                            task_name, self.hostname,
+                            self._dump_results(result._result), extra=data)
