@@ -53,8 +53,11 @@ DOCUMENTATION = '''
 
 EXAMPLES = '''
 examples: >
-    1. Install python module python-logstash
-        pip install python-logstash
+    1. Install python module python3-logstash
+       python3:
+        pip install python3-logstash
+       python2:
+        pip install pythons-logstash
 
     2. Enable callback plugin
     ansible.cfg:
@@ -113,8 +116,8 @@ class CallbackModule(CallbackBase):
 
         if not HAS_LOGSTASH:
             self.disabled = True
-            self._display.warning("The required python-logstash is not installed. "
-                                  "pip install python-logstash")
+            self._display.warning("The required python3-logstash is not installed. "
+                                  "pip install python3-logstash")
 
         self.start_time = datetime.utcnow()
 
@@ -123,7 +126,7 @@ class CallbackModule(CallbackBase):
             self.logger = logging.getLogger('python-logstash-logger')
             self.logger.setLevel(logging.DEBUG)
 
-            self.handler = logstash.TCPLogstashHandler(
+            self.handler = logstash.LogstashHandler(
                 self.ls_server,
                 self.ls_port,
                 version=1,
