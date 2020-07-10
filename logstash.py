@@ -1,4 +1,4 @@
-# (C) 2018, Yevhen Khmelenko <ujenmr@gmail.com>
+# (C) 2020, Yevhen Khmelenko <ujenmr@gmail.com>
 # (C) 2017 Ansible Project
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
@@ -253,7 +253,7 @@ class CallbackModule(CallbackBase):
             data['ansible_result'] = self._dump_results(result._result)
 
             self.logger.info("TASK OK | %s | RESULT | %s",
-                                task_name, self._dump_results(result._result), extra=data)
+                             task_name, self._dump_results(result._result), extra=data)
 
     def v2_runner_on_skipped(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -312,8 +312,8 @@ class CallbackModule(CallbackBase):
 
         self.errors += 1
         self.logger.error("TASK FAILED | %s | HOST | %s | RESULT | %s",
-                            task_name, self.hostname,
-                            self._dump_results(result._result), extra=data)
+                          task_name, self.hostname,
+                          self._dump_results(result._result), extra=data)
 
     def v2_runner_on_unreachable(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -330,8 +330,8 @@ class CallbackModule(CallbackBase):
 
         self.errors += 1
         self.logger.error("UNREACHABLE | %s | HOST | %s | RESULT | %s",
-                            task_name, self.hostname,
-                            self._dump_results(result._result), extra=data)
+                          task_name, self.hostname,
+                          self._dump_results(result._result), extra=data)
 
     def v2_runner_on_async_failed(self, result, **kwargs):
         task_name = str(result._task).replace('TASK: ', '').replace('HANDLER: ', '')
@@ -348,5 +348,5 @@ class CallbackModule(CallbackBase):
 
         self.errors += 1
         self.logger.error("ASYNC FAILED | %s | HOST | %s | RESULT | %s",
-                            task_name, self.hostname,
-                            self._dump_results(result._result), extra=data)
+                          task_name, self.hostname,
+                          self._dump_results(result._result), extra=data)
