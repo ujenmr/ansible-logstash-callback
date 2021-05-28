@@ -18,7 +18,7 @@ Put the `logstash` plugin from this git repository into the path_to_callback_plu
 This plugin makes use of the following environment variables:
 * `LOGSTASH_SERVER`        (optional): defaults to localhost
 * `LOGSTASH_PORT`          (optional): defaults to 5000
-* `LOGSTASH_TYPE`          (optional): defaults to ansible
+* `LOGSTASH_TYPE`          (optional): the Elk Index to use, defaults to "ansible"
 * `LOGSTASH_PRE_COMMAND`   (optional): defaults is "ansible --version | head -1" execute command before run and result put `ansible_pre_command_output` field
 
 Or you can use the `[callback_logstash]` section of your `ansible.cfg`
